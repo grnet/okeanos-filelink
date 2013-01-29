@@ -5,7 +5,7 @@
 
 <!DOCTYPE html [
   <!ENTITY % htmlDTD PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "DTD/xhtml1-strict.dtd"> %htmlDTD;
-  <!ENTITY % dbDTD SYSTEM "chrome://pithosplus/locale/settings.dtd"> %dbDTD;
+  <!ENTITY % ppDTD SYSTEM "chrome://pithosplus/locale/settings.dtd"> %ppDTD;
 ]>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
@@ -19,7 +19,7 @@
     <form id="provide-form" onsubmit="return false;">
       <label for="username">&PithosPlusSettings.username;</label>
       <input id="username" type="text" required="true"/>
-      <div id="learn-more">
+      <div id="learn-more" class="float-right">
         <a href="https://okeanos.io/">&PithosPlusSettings.learnMore;</a>
       </div>
       <div>
