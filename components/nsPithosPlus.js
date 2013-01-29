@@ -298,7 +298,7 @@ nsPithosPlus.prototype = {
    *                This is used for things like displaying account settings,
    *                where we don't want to pop up the oauth ui.
    */
-  logon: function nsPithosPlus_logon(successCallback, failureCallback, aWithUI) {
+  logon: function nsPithosPlus_login(successCallback, failureCallback, aWithUI) {
     this.log.info("Logging in, aWithUI = " + aWithUI);
     if(this._authToken == undefined || !this._authToken)
       this._authToken = this.getPassword(this._userName, !aWithUI);
@@ -306,7 +306,7 @@ nsPithosPlus.prototype = {
 
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("GET", gPithosUrl + self._userName, true);
+    req.open("GET", gPithosUrl + this._userName, true);
 
     req.onerror = function() {
       this.log.info("logon failure");
@@ -328,8 +328,8 @@ nsPithosPlus.prototype = {
     }.bind(this);
 
     req.setRequestHeader("Content-type", "application/json");
-    req.setRequestHeader("X-Auth-Token", self._authToken);
-    //req.send();
+    req.setRequestHeader("X-Auth-Token", this._authToken);
+    req.send();
     this.log.info("Login information sent!");
   },
 
