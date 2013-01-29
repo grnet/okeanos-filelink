@@ -83,8 +83,8 @@ nsPithosPlus.prototype = {
   },
 
 
-  /** 
-   * Attempts to upload a file to PithosPlus.
+  /** XXX
+   * Attempts to upload a file to PithosPlus servers.
    *
    * @param aFile the nsILocalFile to be uploaded
    * @param aCallback an nsIRequestObserver for monitoring the start and
@@ -98,7 +98,7 @@ nsPithosPlus.prototype = {
   },
 
 
-  /**
+  /** XXX
    * Attempts to cancel a file upload.
    *
    * @param aFile the nsILocalFile to cancel the upload for.
@@ -109,7 +109,7 @@ nsPithosPlus.prototype = {
   },
 
 
-  /**
+  /** XXX
    * Returns the sharing URL for some uploaded file.
    *
    * @param aFile the nsILocalFile to get the URL for.
@@ -119,7 +119,7 @@ nsPithosPlus.prototype = {
   },
 
 
-  /**
+  /** XXX
    * Attempts to refresh cached profile information for the account associated
    * with this instance's account key.
    *
@@ -131,7 +131,30 @@ nsPithosPlus.prototype = {
   refreshUserInfo: function nsYouSendIt_refreshUserInfo(aWithUI, aListener) {
     if (Services.io.offline)
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
-    throw Ci.nsIMsgCloudFileProvider.offlineErr;
+
+    aListener.onStartRequest(null, null);
+    // Let's define some reusable callback functions...
+    let onGetUserInfoSuccess = function() {
+      aListener.onStopRequest(null, null, Cr.NS_OK);
+    }
+    let onAuthFailure = function() {
+      aListener.onStopRequest(null, null,
+          Ci.nsIMsgCloudFileProvider.authErr);
+    }
+
+    // If we're not logged in, attempt to login, and then attempt to
+    // get user info if logging in is successful.
+    this.log.info("Checking to see if we're logged in");
+    if (!this._loggedIn) {
+      let onLoginSuccess = function() {
+        this._getUserInfo(onGetUserInfoSuccess, onAuthFailure);
+      }.bind(this);
+      return this.logon(onLoginSuccess, onAuthFailure, aWithUI);
+    }
+
+    // If we're logged in, attempt to get user info.
+    if (!this._userInfo)
+      return this._getUserInfo(onGetUserInfoSuccess, onAuthFailure);
   },
 
 
@@ -153,14 +176,8 @@ nsPithosPlus.prototype = {
    */
   get createNewAccountUrl() "https://okeanos.grnet.gr",
 
-
-  /**
-   * If we don't know the limit, this will return -1.
-   */
   get fileUploadSizeLimit() this._maxFileSize,
-
   get remainingFileSpace() this._availableStorage,
-
   get fileSpaceUsed() this._fileSpaceUsed,
 
 
@@ -181,22 +198,23 @@ nsPithosPlus.prototype = {
    * @param aRequestObserver an nsIRequestObserver for monitoring the start and
    *                         stop states of the login procedure.
    */
-  createExistingAccount: function nsPithosPlus_createExistingAccount(aRequestObserver) {
+  createExistingAccount: function nsPithosPlus_createExistingAccount(
+                             aRequestObserver) {
      // XXX: replace this with a better function
     let successCb = function(aResponseText, aRequest) {
       aRequestObserver.onStopRequest(null, this, Cr.NS_OK);
     }.bind(this);
 
     let failureCb = function(aResponseText, aRequest) {
-      aRequestObserver.onStopRequest(null, this,
-                                     Ci.nsIMsgCloudFileProvider.authErr);
+      aRequestObserver.onStopRequest(
+              null, this, Ci.nsIMsgCloudFileProvider.authErr);
     }.bind(this);
 
     this.logon(successCb, failureCb, true);
   },
 
 
-  /**
+  /** XXX
    * Attempt to delete an upload file if we've uploaded it.
    *
    * @param aFile the file that was originall uploaded
@@ -233,7 +251,12 @@ nsPithosPlus.prototype = {
 
     if (aNoPrompt)
       this.log.info("Suppressing password prompt");
-
+    let passwordURI = gPithosUrl;
+    let logins = Services.logins.findLogins({}, passwordURI, null, passwordURI);
+    for each (let loginInfo in logins) {
+      if (loginInfo.username == aUsername)
+        return loginInfo.password;
+    }
     if (aNoPrompt)
       return "";
 
@@ -255,9 +278,9 @@ nsPithosPlus.prototype = {
 
     return "";
   },
- 
+
   /**
-   * Clears any saved YouSendIt passwords for this instance's account.
+   * Clears any saved PithosPlus passwords for this instance's account.
    */
   clearPassword: function nsPithosPlus_clearPassword() {
     let logins = Services.logins.findLogins({}, gPithosUrl, null, gPithosUrl);
@@ -276,9 +299,38 @@ nsPithosPlus.prototype = {
    *                where we don't want to pop up the oauth ui.
    */
   logon: function nsPithosPlus_logon(successCallback, failureCallback, aWithUI) {
-    this.getPassword(this._userName, !aWithUI);
-    failureCallback();
-    return;
+    this.log.info("Logging in, aWithUI = " + aWithUI);
+    if(this._authToken == undefined || !this._authToken)
+      this._authToken = this.getPassword(this._userName, !aWithUI);
+    this.log.info("Sending login information...");
+
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("GET", gPithosUrl + self._userName, true);
+
+    req.onerror = function() {
+      this.log.info("logon failure");
+      failureCallback();
+    }.bind(this);
+
+    req.onload = function() {
+      if(req.status == 200) {
+        this._cachedAuthToken = this._authToken;
+        this._loggedIn = true;
+        successCallback();
+      } else {
+        this.clearPassword();
+        this._loggedIn = false;
+        this._lastErrorText = req.responseText;
+        this._lastErrorStatus = req.status;
+        failureCallback();
+      }
+    }.bind(this);
+
+    req.setRequestHeader("Content-type", "application/json");
+    req.setRequestHeader("X-Auth-Token", self._authToken);
+    //req.send();
+    this.log.info("Login information sent!");
   },
 
 
@@ -322,12 +374,11 @@ nsPithosPlusFileUploader.prototype = {
   _request : null,
 
 
-  /**
+  /** XXX
    * Kicks off the upload procedure for this uploader.
    */
   startUpload: function nsPFU_startUpload() {
     let curDate = Date.now().toString();
-
     return;
   },
 };
