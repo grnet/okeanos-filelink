@@ -47,7 +47,6 @@ nsPithosPlus.prototype = {
   _accountKey: false,
   _prefBranch: null,
   _userName: "",
-  _authToken: "",
   _loggedIn: false,
   _userInfo: false,
   _file : null,
@@ -136,7 +135,6 @@ nsPithosPlus.prototype = {
 
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
-        let foo = req.getAllResponseHeaders();
         this.log.info("request status = " + req.status);
         this._userInfo = true;
         this._fileSpaceUsed =
@@ -151,9 +149,8 @@ nsPithosPlus.prototype = {
         let retryGetUserInfo = function() {
           this._getUserInfo(successCallback, failureCallback);
         }.bind(this);
+        this.clearPassword();
         this._loggedIn = false;
-        this._cachedAutToken = "";
-        this._authToken = "";
         this.logon(retryGetUserInfo, failureCallback, true);
         return;
       }
@@ -302,12 +299,10 @@ nsPithosPlus.prototype = {
 
     if (aNoPrompt)
       this.log.info("Suppressing password prompt");
-    let passwordURI = gPithosUrl;
-    let logins = Services.logins.findLogins({}, passwordURI, null, passwordURI);
-    for each (let loginInfo in logins) {
-      if (loginInfo.username == aUsername)
-        return loginInfo.password;
-    }
+
+    if (this._cachedAuthToken != "")
+      return this._cachedAuthToken;
+
     if (aNoPrompt)
       return "";
 
@@ -317,14 +312,13 @@ nsPithosPlus.prototype = {
     let authPrompter = Services.ww.getNewAuthPrompter(win);
     let password = { value: "" };
     // Use the service name in the prompt text
-    let serverUrl = gPithosUrl;
     let messengerBundle = Services.strings.createBundle(
         "chrome://messenger/locale/messenger.properties");
     let promptString = messengerBundle.formatStringFromName(
         "passwordPrompt", [this._userName, this.displayName], 2);
 
-    if (authPrompter.promptPassword(this.displayName, promptString, serverUrl,
-                authPrompter.SAVE_PASSWORD_PERMANENTLY, password))
+    if (authPrompter.promptPassword(this.displayName, promptString, gPithosUrl,
+                authPrompter.SAVE_PASSWORD_NEVER, password))
       return password.value;
 
     return "";
@@ -334,10 +328,7 @@ nsPithosPlus.prototype = {
    * Clears any saved PithosPlus passwords for this instance's account.
    */
   clearPassword: function nsPithosPlus_clearPassword() {
-    let logins = Services.logins.findLogins({}, gPithosUrl, null, gPithosUrl);
-    for each (let loginInfo in logins)
-      if (loginInfo.username == this._userName)
-        Services.logins.removeLogin(loginInfo);
+    this._cachedAuthToken = "";
   },
 
   /**
@@ -351,8 +342,7 @@ nsPithosPlus.prototype = {
    */
   logon: function nsPithosPlus_login(successCallback, failureCallback, aWithUI) {
     this.log.info("Logging in, aWithUI = " + aWithUI);
-    if(this._authToken == undefined || !this._authToken)
-      this._authToken = this.getPassword(this._userName, !aWithUI);
+    this._cachedAuthToken = this.getPassword(this._userName, !aWithUI);
     this.log.info("Sending login information...");
 
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
@@ -362,12 +352,12 @@ nsPithosPlus.prototype = {
 
     req.onerror = function() {
       this.log.info("logon failure");
+      this.clearPassword();
       failureCallback();
     }.bind(this);
 
     req.onload = function() {
       if(req.status == 200) {
-        this._cachedAuthToken = this._authToken;
         this._loggedIn = true;
         successCallback();
       } else {
@@ -380,7 +370,7 @@ nsPithosPlus.prototype = {
     }.bind(this);
 
     req.setRequestHeader("Content-type", "application/json");
-    req.setRequestHeader("X-Auth-Token", this._authToken);
+    req.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
     req.send();
     this.log.info("Login information sent!");
   },
