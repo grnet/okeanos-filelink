@@ -554,9 +554,9 @@ nsPithosPlusFileUploader.prototype = {
    */
   _prepareToSend: function nsPFU__prepareToSend(successCallback,
                                                 failureCallback) {
-    let curDate = Date.now().toString();
     // First create the container
     let container = gPithosUrl + this.pithosplus._userName + "/" + kContainer;
+    let dateStr = this._formatDate();
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
     req.open("PUT", container, true);
@@ -567,7 +567,7 @@ nsPithosPlusFileUploader.prototype = {
         let fileName = /^[\040-\176]+$/.test(this.file.leafName)
           ? this.file.leafName
           : encodeURIComponent(this.file.leafName);
-        this._urlFile = container + curDate + "/" + fileName;
+        this._urlFile = container + dateStr + "/" + fileName;
         this.pithosplus._uploadInfo[this.file.path] = this._urlFile;
         successCallback();
       } else {
@@ -586,6 +586,30 @@ nsPithosPlusFileUploader.prototype = {
     req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
     req.setRequestHeader("Content-Type", "application/json");
     req.send();
+  },
+
+
+  /**
+   * Format current date
+   */
+  _formatDate: function nsPFU__formatDate() {
+    let m_names = new Array("Jan", "Feb", "Mar", "Apr", "May",
+        "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+    let date = new Date();
+    var curr_hour = date.getHours() + "";
+    if (curr_hour.length == 1)
+      curr_hour = "0" + curr_hour;
+    var curr_min = date.getMinutes() + "";
+    if (curr_min.length == 1)
+      curr_min = "0" + curr_min;
+    var curr_sec = date.getSeconds() + "";
+    if (curr_sec.length == 1)
+      curr_sec = "0" + curr_sec;
+    let dateStr = date.getDate() + " " + m_names[date.getMonth()] +
+      " " + date.getFullYear() + "  " + curr_hour + ":" +
+      curr_min + ":" + curr_sec;
+
+    return dateStr;
   },
 
 
