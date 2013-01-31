@@ -22,7 +22,8 @@ const kMaxFileSize = 157286400;
 
 const kDeletePath = "fileops/delete/?root=sandbox";
 const kSharesPath = "shares/sandbox/";
-const kFilesPutPath = "files_put/sandbox/";
+const kContainer = "FileLink/";
+const kUpdate = "?update&format=json"
 
 
 function nsPithosPlus() {
@@ -82,7 +83,39 @@ nsPithosPlus.prototype = {
   },
 
 
-  /** XXX
+  /**
+   * Private callback function passed to, and called from
+   * nsPithosPlusFileUploader.
+   *
+   * @param aRequestObserver a request observer for monitoring the start and
+   *                         stop states of a request.
+   * @param aStatus the status of the request.
+   */
+  _uploaderCallback: function nsPithosPlus__uploaderCallback(
+                         aRequestObserver, aStatus) {
+    aRequestObserver.onStopRequest(null, null, aStatus);
+
+    this._uploadingFile = null;
+    this._uploads.shift();
+    if (this._uploads.length > 0) {
+      let nextUpload = this._uploads[0];
+      this.log.info("chaining upload, file = " + nextUpload.file.leafName);
+      this._uploadingFile = nextUpload.file;
+      this._uploader = nextUpload;
+      try {
+        this.uploadFile(nextUpload.file, nextUpload.requestObserver);
+      }
+      catch (ex) {
+        // I'd like to pass ex.result, but that doesn't seem to be defined.
+        nextUpload.callback(nextUpload.requestObserver, Cr.NS_ERROR_FAILURE);
+      }
+    }
+    else
+      this._uploader = null;
+  },
+
+
+  /**
    * Attempts to upload a file to PithosPlus servers.
    *
    * @param aFile the nsILocalFile to be uploaded
@@ -93,9 +126,73 @@ nsPithosPlus.prototype = {
     this.log.info("in upload file");
     if (Services.io.offline)
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
-    throw Ci.nsIMsgCloudFileProvider.offlineErr;
+
+    this.log.info("Preparing to upload a file");
+
+    // if we're uploading a file, queue this request.
+    if (this._uploadingFile && this._uploadingFile != aFile) {
+      this.log.info("Adding file to queue");
+      let uploader = new nsPithosPlusFileUploader(
+          this, aFile, this._uploaderCallback.bind(this), aCallback);
+      this._uploads.push(uploader);
+      return;
+    }
+
+    this._uploadingFile = aFile;
+    this._urlListener = aCallback;
+
+    let finish = function() {
+      this._finishUpload(aFile, aCallback);
+    }.bind(this);
+
+    let onAuthFailure = function() {
+      this._urlListener.onStopRequest(
+          null, null, Ci.nsIMsgCloudFileProvider.authErr);
+    }.bind(this);
+
+    this.log.info("Checking to see if we're logged in");
+
+    if (!this._loggedIn) {
+      let onLoginSuccess = function() {
+        this._getUserInfo(onGetUserInfoSuccess, onAuthFailure);
+      }.bind(this);
+      return this.logon(onLoginSuccess, onAuthFailure, true);
+    }
+
+    if (!this._userInfo)
+      return this._getUserInfo(finish, onAuthFailure);
+
+    finish();
   },
 
+  /**
+   * A private function called when we're almost ready to kick off the upload
+   * for a file. First, ensures that the file size is not too large, and that
+   * we won't exceed our storage quota, and then kicks off the upload.
+   *
+   * @param aFile the nsILocalFile to upload
+   * @param aCallback the nsIRequestObserver for monitoring the start and stop
+   *                  states of the upload procedure.
+   */
+  _finishUpload: function nsPihosPlus__finishUpload(aFile, aCallback) {
+    let cancel = Ci.nsIMsgCloudFileProvider.uploadCanceled;
+
+    if (this._maxFileSize != -1 && aFile.fileSize > this._maxFileSize)
+      return aCallback.onStopRequest(null, null, cancel);
+    if (aFile.fileSize > this._availableStorage)
+      return aCallback.onStopRequest(null, null, cancel);
+
+    this._userInfo = false; // force us to update userInfo on every upload.
+
+    if (!this._uploader) {
+      this._uploader = new nsPithosPlusFileUploader(
+          this, aFile, this._uploaderCallback.bind(this), aCallback);
+      this._uploads.unshift(this._uploader);
+    }
+
+    this._uploadingFile = aFile;
+    this._uploader.startUpload();
+  },
 
   /** XXX
    * Attempts to cancel a file upload.
@@ -324,12 +421,14 @@ nsPithosPlus.prototype = {
     return "";
   },
 
+
   /**
    * Clears any saved PithosPlus passwords for this instance's account.
    */
   clearPassword: function nsPithosPlus_clearPassword() {
     this._cachedAuthToken = "";
   },
+
 
   /**
    * logon to the pithos account.
@@ -420,9 +519,159 @@ nsPithosPlusFileUploader.prototype = {
    * Kicks off the upload procedure for this uploader.
    */
   startUpload: function nsPFU_startUpload() {
-    let curDate = Date.now().toString();
-    return;
+    this.requestObserver.onStartRequest(null, null);
+
+    let onSuccess = function() {
+      this._uploadFile();
+    }.bind(this);
+
+    let onFailure = function() {
+      this.callback(this.requestObserver, Ci.nsIMsgCloudFileProvider.uploadErr);
+    }.bind(this);
+
+    return this._prepareToSend(onSuccess, onFailure);
   },
+
+
+  /** XXX
+   * Compute the URL that we will use to send the upload.
+   *
+   * @param successCallback the callback fired on success
+   * @param failureCallback the callback fired on failure
+   */
+  _prepareToSend: function nsPFU__prepareToSend(successCallback,
+                                                failureCallback) {
+    let curDate = Date.now().toString();
+    // First create the container
+    let container = gPithosUrl + this.pithosplus._userName + "/" + kContainer;
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("PUT", container, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+
+    req.onload = function() {
+      if (req.status >= 200 && req.status < 400) {
+        let fileName = /^[\040-\176]+$/.test(this.file.leafName)
+          ? this.file.leafName
+          : encodeURIComponent(this.file.leafName);
+        this._urlFile = container + curDate + "/" + fileName;
+        this.pithosplus._uploadInfo[this.file.path] = this._urlFile;
+        successCallback();
+      } else {
+        this.log.error("Preparing to send failed!");
+        this.log.error("Response was: " + req.responseText);
+        this.pithosplus._lastErrorText = req.responseText;
+        this.pithosplus._lastErrorStatus = req.status;
+        failureCallback();
+      }
+    }.bind(this);
+
+    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("Content-Type", "application/json");
+    req.send();
+  },
+
+
+  /** XXX
+   * Once we've got the URL to upload the file to, this function actually
+   * does the upload of the file to Pithos+.
+   */
+  _uploadFile: function nsPFU__uploadFile() {
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    this.log.info("upload url = " + this._urlFile);
+    this.request = req;
+    req.open("PUT", this._urlFile, true);
+
+    req.onload = function() {
+      if (req.status >= 200 && req.status < 400) {
+        this._getShareUrl();
+      } else {
+        this.callback(this.requestObserver,
+                      Ci.nsIMsgCloudFileProvider.uploadErr);
+      }
+    }.bind(this);
+
+    req.onerror = function () {
+      if (this.callback)
+        this.callback(this.requestObserver,
+                      Ci.nsIMsgCloudFileProvider.uploadErr);
+    }.bind(this);
+
+    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("Content-type", "application/octet-stream");
+    try {
+      this._fstream = Cc["@mozilla.org/network/file-input-stream;1"]
+                     .createInstance(Ci.nsIFileInputStream);
+      this._fstream.init(this.file, -1, 0, 0);
+      this._bufStream = Cc["@mozilla.org/network/buffered-input-stream;1"]
+                        .createInstance(Ci.nsIBufferedInputStream);
+      this._bufStream.init(this._fstream, 4096);
+      req.sendAsBinary(this._bufStream.QueryInterface(Ci.nsIInputStream));
+    } catch (ex) {
+      this.log.error(ex);
+      throw ex;
+    }
+  },
+
+
+  /** XXX
+   * Cancels the upload request for the file associated with this Uploader.
+   */
+  cancel: function nsPFU_cancel() {
+    this.log.info("in uploader cancel");
+    this.callback(this.requestObserver, Ci.nsIMsgCloudFileProvider.uploadCanceled);
+    delete this.callback;
+    if (this.request) {
+      this.log.info("cancelling upload request");
+      let req = this.request;
+      if (req.channel) {
+        this.log.info("cancelling upload channel");
+        req.channel.cancel(Cr.NS_BINDING_ABORTED);
+      }
+      this.request = null;
+    }
+  },
+
+
+  /** XXX
+   * Attempt to retrieve the sharing URL for the file uploaded.
+   */
+  _getShareUrl: function nsPFU__getShareUrl() {
+    this.log.info("Making file " + this.file + " public");
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("POST", this._urlFile + kUpdate, true);
+
+    let succeed = function() {
+      this.callback(this.requestObserver, Cr.NS_OK);
+    }.bind(this);
+
+    let failed = function() {
+      this.callback(this.requestObserver, this.file.leafName.length > 120
+                    ? Ci.nsIMsgCloudFileProvider.uploadExceedsFileNameLimit
+                    : Ci.nsIMsgCloudFileProvider.uploadErr);
+    }.bind(this);
+
+    req.onload = function() {
+      if (req.status >= 200 && req.status < 400) {
+        this.pithosplus._urlsForFiles[this.file.path] = req.responseText;
+        succeed();
+      } else {
+        failed();
+      }
+    }.bind(this);
+
+    req.onerror = function() {
+      failed();
+    }.bind(this);
+
+    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("X-Object-Public", "True");
+    req.setRequestHeader("Content-type", "application/json");
+    req.send();
+  },
+
 };
 
 const NSGetFactory = XPCOMUtils.generateNSGetFactory([nsPithosPlus]);
