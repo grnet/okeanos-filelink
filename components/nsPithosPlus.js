@@ -119,7 +119,58 @@ nsPithosPlus.prototype = {
   },
 
 
-  /** XXX
+  /**
+   * A private function for retrieving profile information about a user.
+   *
+   * @param successCallback a callback fired if retrieving profile information
+   *                        is successful.
+   * @param failureCallback a callback fired if retrieving profile information
+   *                        fails.
+   */
+  _getUserInfo: function nsPithosPlus_userInfo(successCallback, failureCallback) {
+    this.log.info("getting user info");
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("HEAD", gPithosUrl + this._userName, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+
+    req.onload = function() {
+      if (req.status >= 200 && req.status < 400) {
+        let foo = req.getAllResponseHeaders();
+        this.log.info("request status = " + req.status);
+        this._userInfo = true;
+        this._fileSpaceUsed =
+          parseInt(req.getResponseHeader("X-Account-Bytes-Used"));
+        this._availableStorage =
+          parseInt(req.getResponseHeader("X-Account-Policy-Quota")) -
+          this._fileSpaceUsed;
+        this.log.info("available storage = " + this._availableStorage);
+        successCallback();
+      } else {
+        this.log.info("Our token has gone stale - requesting a new one.");
+        let retryGetUserInfo = function() {
+          this._getUserInfo(successCallback, failureCallback);
+        }.bind(this);
+        this._loggedIn = false;
+        this._cachedAutToken = "";
+        this._authToken = "";
+        this.logon(retryGetUserInfo, failureCallback, true);
+        return;
+      }
+    }.bind(this);
+
+    req.onerror = function() {
+      this.log.info("getUserInfo failed - status = " + req.status);
+      failureCallback();
+    }.bind(this);
+
+    req.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
+    req.setRequestHeader("Content-type", "application/xml");
+    req.send();
+  },
+
+
+  /**
    * Attempts to refresh cached profile information for the account associated
    * with this instance's account key.
    *
@@ -128,7 +179,7 @@ nsPithosPlus.prototype = {
    * @param aListener an nsIRequestObserver for monitoring the start and stop
    *                  states of fetching profile information.
    */
-  refreshUserInfo: function nsYouSendIt_refreshUserInfo(aWithUI, aListener) {
+  refreshUserInfo: function nsPithosPlus_refreshUserInfo(aWithUI, aListener) {
     if (Services.io.offline)
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
 
@@ -268,9 +319,9 @@ nsPithosPlus.prototype = {
     // Use the service name in the prompt text
     let serverUrl = gPithosUrl;
     let messengerBundle = Services.strings.createBundle(
-      "chrome://messenger/locale/messenger.properties");
+        "chrome://messenger/locale/messenger.properties");
     let promptString = messengerBundle.formatStringFromName(
-            "passwordPrompt", [this._userName, this.displayName], 2);
+        "passwordPrompt", [this._userName, this.displayName], 2);
 
     if (authPrompter.promptPassword(this.displayName, promptString, serverUrl,
                 authPrompter.SAVE_PASSWORD_PERMANENTLY, password))
@@ -307,6 +358,7 @@ nsPithosPlus.prototype = {
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
     req.open("GET", gPithosUrl + this._userName, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     req.onerror = function() {
       this.log.info("logon failure");
