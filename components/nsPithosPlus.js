@@ -195,14 +195,26 @@ nsPithosPlus.prototype = {
     this._uploader.startUpload();
   },
 
-  /** XXX
+  /**
    * Attempts to cancel a file upload.
    *
    * @param aFile the nsILocalFile to cancel the upload for.
    */
   cancelFileUpload: function nsPithosPlus_cancelFileUpload(aFile) {
     this.log.info("in cancel upload");
-    return Cr.NS_ERROR_NOT_IMPLEMENTED;
+    if (this._uploadingFile != null && this._uploader != null &&
+        this._uploadingFile.equals(aFile)) {
+      this._uploader.cancel();
+    }
+    else {
+      for (let i = 0; i < this._uploads.length; i++)
+        if (this._uploads[i].file.equals(aFile)) {
+          this._uploads[i].requestObserver.onStopRequest(
+            null, null, Ci.nsIMsgCloudFileProvider.uploadCanceled);
+          this._uploads.splice(i, 1);
+          return;
+        }
+    }
   },
 
 
