@@ -16,13 +16,14 @@ Cu.import("resource:///modules/gloda/log4moz.js");
 Cu.import("resource:///modules/cloudFileAccounts.js");
 
 var gPithosUrl = "https://pithos.okeanos.grnet.gr/v1/";
+var gPublicUrl = "https://pithos.okeanos.grnet.gr";
 
 // The kMaxFileSize may be a fixed limit.
 const kMaxFileSize = 157286400;
 
 const kDeletePath = "fileops/delete/?root=sandbox";
 const kSharesPath = "shares/sandbox/";
-const kContainer = "FileLink/";
+const kContainer = "ThunderBird FileLink/";
 const kUpdate = "?update&format=json"
 
 
@@ -205,7 +206,7 @@ nsPithosPlus.prototype = {
   },
 
 
-  /** XXX
+  /**
    * Returns the sharing URL for some uploaded file.
    *
    * @param aFile the nsILocalFile to get the URL for.
@@ -515,7 +516,7 @@ nsPithosPlusFileUploader.prototype = {
   _request : null,
 
 
-  /** XXX
+  /**
    * Kicks off the upload procedure for this uploader.
    */
   startUpload: function nsPFU_startUpload() {
@@ -533,7 +534,7 @@ nsPithosPlusFileUploader.prototype = {
   },
 
 
-  /** XXX
+  /**
    * Compute the URL that we will use to send the upload.
    *
    * @param successCallback the callback fired on success
@@ -566,13 +567,17 @@ nsPithosPlusFileUploader.prototype = {
       }
     }.bind(this);
 
+    req.onerror = function () {
+        failureCallback();
+    }.bind(this);
+
     req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
     req.setRequestHeader("Content-Type", "application/json");
     req.send();
   },
 
 
-  /** XXX
+  /**
    * Once we've got the URL to upload the file to, this function actually
    * does the upload of the file to Pithos+.
    */
@@ -582,20 +587,21 @@ nsPithosPlusFileUploader.prototype = {
     this.log.info("upload url = " + this._urlFile);
     this.request = req;
     req.open("PUT", this._urlFile, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
-        this._getShareUrl();
+        this._publish();
       } else {
         this.callback(this.requestObserver,
-                      Ci.nsIMsgCloudFileProvider.uploadErr);
+            Ci.nsIMsgCloudFileProvider.uploadErr);
       }
     }.bind(this);
 
     req.onerror = function () {
       if (this.callback)
         this.callback(this.requestObserver,
-                      Ci.nsIMsgCloudFileProvider.uploadErr);
+            Ci.nsIMsgCloudFileProvider.uploadErr);
     }.bind(this);
 
     req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
@@ -607,7 +613,7 @@ nsPithosPlusFileUploader.prototype = {
       this._bufStream = Cc["@mozilla.org/network/buffered-input-stream;1"]
                         .createInstance(Ci.nsIBufferedInputStream);
       this._bufStream.init(this._fstream, 4096);
-      req.sendAsBinary(this._bufStream.QueryInterface(Ci.nsIInputStream));
+      req.send(this._bufStream.QueryInterface(Ci.nsIInputStream));
     } catch (ex) {
       this.log.error(ex);
       throw ex;
@@ -615,7 +621,7 @@ nsPithosPlusFileUploader.prototype = {
   },
 
 
-  /** XXX
+  /**
    * Cancels the upload request for the file associated with this Uploader.
    */
   cancel: function nsPFU_cancel() {
@@ -634,29 +640,24 @@ nsPithosPlusFileUploader.prototype = {
   },
 
 
-  /** XXX
-   * Attempt to retrieve the sharing URL for the file uploaded.
+  /**
+   * Publish the file
    */
-  _getShareUrl: function nsPFU__getShareUrl() {
+  _publish: function nsPFU__publish() {
     this.log.info("Making file " + this.file + " public");
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
     req.open("POST", this._urlFile + kUpdate, true);
-
-    let succeed = function() {
-      this.callback(this.requestObserver, Cr.NS_OK);
-    }.bind(this);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     let failed = function() {
-      this.callback(this.requestObserver, this.file.leafName.length > 120
-                    ? Ci.nsIMsgCloudFileProvider.uploadExceedsFileNameLimit
-                    : Ci.nsIMsgCloudFileProvider.uploadErr);
+      this.callback(this.requestObserver,
+          Ci.nsIMsgCloudFileProvider.uploadErr);
     }.bind(this);
 
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
-        this.pithosplus._urlsForFiles[this.file.path] = req.responseText;
-        succeed();
+        this._getShareUrl();
       } else {
         failed();
       }
@@ -672,6 +673,39 @@ nsPithosPlusFileUploader.prototype = {
     req.send();
   },
 
+  /**
+   * Attempt to retrieve the sharing URL for the file uploaded.
+   */
+  _getShareUrl: function nsPFU__getShareUrl() {
+    this.log.info("Get public url for " + this.file);
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("HEAD", this._urlFile, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+
+    let succeed = function() {
+      this.callback(this.requestObserver, Cr.NS_OK);
+    }.bind(this);
+
+    let failed = function() {
+      this.callback(this.requestObserver,
+          Ci.nsIMsgCloudFileProvider.uploadErr);
+    }.bind(this);
+
+    req.onload = function() {
+      if (req.status >= 200 && req.status < 400) {
+        this.pithosplus._urlsForFiles[this.file.path] =
+          gPublicUrl + req.getResponseHeader("x-object-public");
+        succeed();
+      } else {
+        failed();
+      }
+    }.bind(this);
+
+    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("Content-type", "application/json");
+    req.send();
+  },
 };
 
 const NSGetFactory = XPCOMUtils.generateNSGetFactory([nsPithosPlus]);
