@@ -21,10 +21,10 @@ var gPublicUrl = "https://pithos.okeanos.grnet.gr";
 // The kMaxFileSize may be a fixed limit.
 const kMaxFileSize = 157286400;
 
-const kDeletePath = "fileops/delete/?root=sandbox";
-const kSharesPath = "shares/sandbox/";
+const kProfilePath = "https://accounts.okeanos.grnet.gr/im/profile";
 const kContainer = "ThunderBird FileLink/";
 const kUpdate = "?update&format=json"
+const kDeletePath = "fileops/delete/?root=sandbox";
 
 
 function nsPithosPlus() {
@@ -421,14 +421,14 @@ nsPithosPlus.prototype = {
 
     let authPrompter = Services.ww.getNewAuthPrompter(win);
     let password = { value: "" };
-    // Use the service name in the prompt text
+    // Prompt for a token
     let messengerBundle = Services.strings.createBundle(
-        "chrome://messenger/locale/messenger.properties");
+        "chrome://pithosplus/locale/messenger.properties");
     let promptString = messengerBundle.formatStringFromName(
-        "passwordPrompt", [this._userName, this.displayName], 2);
+        "ppTokenPrompt", [this._userName, this.displayName, kProfilePath], 3);
 
-    if (authPrompter.promptPassword(this.displayName, promptString, gPithosUrl,
-                authPrompter.SAVE_PASSWORD_NEVER, password))
+    if (authPrompter.prompt(this.displayName, promptString, gPithosUrl,
+                authPrompter.SAVE_PASSWORD_NEVER, null, password))
       return password.value;
 
     return "";
