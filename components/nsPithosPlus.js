@@ -18,13 +18,9 @@ Cu.import("resource:///modules/cloudFileAccounts.js");
 var gPithosUrl = "https://pithos.okeanos.grnet.gr/v1/";
 var gPublicUrl = "https://pithos.okeanos.grnet.gr";
 
-// The kMaxFileSize may be a fixed limit.
-const kMaxFileSize = 157286400;
-
 const kProfilePath = "https://accounts.okeanos.grnet.gr/im/profile";
 const kContainer = "ThunderBird FileLink/";
 const kUpdate = "?update&format=json"
-const kDeletePath = "fileops/delete/?root=sandbox";
 
 
 function nsPithosPlus() {
@@ -372,17 +368,67 @@ nsPithosPlus.prototype = {
   },
 
 
-  /** XXX
+  /**
    * Attempt to delete an upload file if we've uploaded it.
    *
    * @param aFile the file that was originall uploaded
    * @param aCallback an nsIRequestObserver for monitoring the starting and
    *                  ending states of the deletion request.
+   *
+   * XXX: It seems that aFile is different (temp file) from the
+   *      a file we linked with Pithos+. Right now we have no
+   *      way of finding which file to delete from Pithos+,
+   *      so just return OK.
    */
   deleteFile: function nsPithosPlus_deleteFile(aFile, aCallback) {
-    if (Services.io.offline)
+    this.log.info("Deleting a file");
+
+    if (Services.io.offline) {
+      this.log.error("We're offline - we can't delete the file.");
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
-    throw Ci.nsIMsgCloudFileProvider.offlineErr;
+    }
+
+    aCallback.onStopRequest(null, null, Cr.NS_OK);
+
+    /*
+    let uploadPath = this._uploadInfo[aFile.path];
+    if (!uploadPath) {
+      this.log.error("Could not find a record for the file to be deleted.");
+      throw Cr.NS_ERROR_FAILURE;
+    }
+
+    let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                .createInstance(Ci.nsIXMLHttpRequest);
+    req.open("DELETE", uploadPath, true);
+    req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+
+    req.onerror = function() {
+      let response = JSON.parse(req.responseText);
+      this._lastErrorStatus = response.errorStatus.status;
+      this._lastErrorText = response.errorStatus.message;
+      this.log.error("There was a problem deleting: " + this._lastErrorText);
+      aCallback.onStopRequest(null, null, Cr.NS_ERROR_FAILURE);
+    }.bind(this);
+
+    req.onload = function() {
+      if (req.status >= 200 && req.status < 400) {
+        this.log.info("Delete was successful!");
+        aCallback.onStopRequest(null, null, Cr.NS_OK);
+      } else {
+        this.log.error("Server has returned a failure on our delete request.");
+        this.log.error("Error code: " + req.status);
+        this.log.error("Error message: " + req.responseText);
+        //aCallback.onStopRequest(null, null,
+        //                        Ci.nsIMsgCloudFileProvider.uploadErr);
+        aCallback.onStopRequest(null, null, Cr.NS_ERROR_FAILURE);
+        return;
+      }
+    }.bind(this);
+
+    req.setRequestHeader("Content-type", "application/json");
+    req.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
+    req.send();
+    */
   },
 
 
