@@ -626,6 +626,7 @@ nsPithosPlusFileUploader.prototype = {
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     req.onload = function() {
+      this.cleanupTempFile();
       if (req.status >= 200 && req.status < 400) {
         this._publish();
       } else {
@@ -635,6 +636,7 @@ nsPithosPlusFileUploader.prototype = {
     }.bind(this);
 
     req.onerror = function () {
+      this.cleanupTempFile();
       if (this.callback)
         this.callback(this.requestObserver,
             Ci.nsIMsgCloudFileProvider.uploadErr);
@@ -651,6 +653,7 @@ nsPithosPlusFileUploader.prototype = {
       this._bufStream.init(this._fstream, 4096);
       req.send(this._bufStream.QueryInterface(Ci.nsIInputStream));
     } catch (ex) {
+      this.cleanupTempFile();
       this.log.error(ex);
       throw ex;
     }
@@ -741,6 +744,18 @@ nsPithosPlusFileUploader.prototype = {
     req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
     req.setRequestHeader("Content-type", "application/json");
     req.send();
+  },
+
+
+  /**
+   * Cleans up any temporary files that this
+   * nsPithosPlusFileUploader may have created.
+   */
+  cleanupTempFile: function nsPFU_cleanupTempFile() {
+    if (this._bufStream)
+      this._bufStream.close();
+    if (this._fstream)
+      this._fstream.close();
   },
 };
 
