@@ -18,7 +18,6 @@ Cu.import("resource:///modules/cloudFileAccounts.js");
 var gPithosUrl = "https://pithos.okeanos.grnet.gr/v1/";
 var gPublicUrl = "https://pithos.okeanos.grnet.gr";
 
-const kProfilePath = "https://accounts.okeanos.grnet.gr/im/profile";
 const kContainer = "ThunderBird FileLink/";
 const kUpdate = "?update&format=json"
 
@@ -471,7 +470,7 @@ nsPithosPlus.prototype = {
     let messengerBundle = Services.strings.createBundle(
         "chrome://pithosplus/locale/messenger.properties");
     let promptString = messengerBundle.formatStringFromName(
-        "ppTokenPrompt", [this._userName, this.displayName, kProfilePath], 3);
+        "ppTokenPrompt", [this._userName, this.displayName], 2);
 
     if (authPrompter.prompt(this.displayName, promptString, gPithosUrl,
                 authPrompter.SAVE_PASSWORD_NEVER, null, password))

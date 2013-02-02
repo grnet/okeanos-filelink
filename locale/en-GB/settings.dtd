@@ -4,4 +4,5 @@
 -->
 <!ENTITY PithosPlusSettings.learnMore "Learn more…">
 <!ENTITY PithosPlusSettings.needAnAccount "Need an account?">
-<!ENTITY PithosPlusSettings.username "Username:">
+<!ENTITY PithosPlusSettings.username "User id">
+<!ENTITY PithosPlusSettings.dashboard "Get it from your Dashboard">
