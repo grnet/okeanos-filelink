@@ -687,8 +687,15 @@ nsPithosPlusFileUploader.prototype = {
             Ci.nsIMsgCloudFileProvider.uploadErr);
     }.bind(this);
 
+    let contentType;
+    try {
+        contentType = mimeService.getTypeFromFile(this.file);
+    }
+    catch (ex) {
+        contentType = "application/octet-stream";
+    }
     req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
-    req.setRequestHeader("Content-type", "application/octet-stream");
+    req.setRequestHeader("Content-type", contentType);
     try {
       this._fstream = Cc["@mozilla.org/network/file-input-stream;1"]
                      .createInstance(Ci.nsIFileInputStream);
@@ -772,8 +779,9 @@ nsPithosPlusFileUploader.prototype = {
     }.bind(this);
 
     let failed = function() {
-      this.callback(this.requestObserver,
-          Ci.nsIMsgCloudFileProvider.uploadErr);
+      if (this.callback)
+        this.callback(this.requestObserver,
+            Ci.nsIMsgCloudFileProvider.uploadErr);
     }.bind(this);
 
     req.onload = function() {
