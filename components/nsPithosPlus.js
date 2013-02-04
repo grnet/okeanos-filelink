@@ -34,7 +34,7 @@ nsPithosPlus.prototype = {
 
   get type() "PithosPlus",
   get displayName() "Pithos+",
-  get serviceURL() "https://okeanos.io/",
+  get serviceURL() "https://okeanos.grnet.gr/",
   get iconClass() "chrome://pithosplus/content/pithosplus.png",
   get accountKey() this._accountKey,
   get lastError() this._lastErrorText,
