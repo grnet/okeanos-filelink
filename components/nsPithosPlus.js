@@ -373,11 +373,6 @@ nsPithosPlus.prototype = {
    * @param aFile the file that was originall uploaded
    * @param aCallback an nsIRequestObserver for monitoring the starting and
    *                  ending states of the deletion request.
-   *
-   * XXX: It seems that aFile is different (temp file) from the
-   *      a file we linked with Pithos+. Right now we have no
-   *      way of finding which file to delete from Pithos+,
-   *      so just return OK.
    */
   deleteFile: function nsPithosPlus_deleteFile(aFile, aCallback) {
     this.log.info("Deleting a file");
@@ -387,9 +382,6 @@ nsPithosPlus.prototype = {
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
     }
 
-    aCallback.onStopRequest(null, null, Cr.NS_OK);
-
-    /*
     let uploadPath = this._uploadInfo[aFile.path];
     if (!uploadPath) {
       this.log.error("Could not find a record for the file to be deleted.");
@@ -427,7 +419,6 @@ nsPithosPlus.prototype = {
     req.setRequestHeader("Content-type", "application/json");
     req.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
     req.send();
-    */
   },
 
 
