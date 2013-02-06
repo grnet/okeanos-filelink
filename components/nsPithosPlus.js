@@ -218,7 +218,7 @@ nsPithosPlus.prototype = {
    *
    * @param aFile the nsILocalFile to get the URL for.
    */
-  urlForFile: function nsYouSendIt_urlForFile(aFile) {
+  urlForFile: function nsPithosPlus_urlForFile(aFile) {
     return this._urlsForFiles[aFile.path];
   },
 
