@@ -17,21 +17,11 @@
   </head>
   <body id="provider-settings">
     <form id="provider-form" onsubmit="return false;">
-      <p style="margin: 0px; padding: 0px;">
-        <table style="width: 100%; height: 32px">
-          <tr>
-            <td width="35%">
-              <label for="accountType">&OkeanosSettings.accountType;</label>
-            </td>
-            <td width="65%">
-              <select style="width: 100%;">
-                <option value="official">&OkeanosSettings.official;</option>
-                <option value="trial">&OkeanosSettings.trial;</option>
-              </select>
-            </td>
-          </tr>
-        </table>
-      </p>
+      <label for="accountType">&OkeanosSettings.accountType;</label>
+      <select id="accountType">
+        <option value="official">&OkeanosSettings.official;</option>
+        <option value="trial">&OkeanosSettings.trial;</option>
+      </select>
       <div id="learn-more" class="float-right">
         <a href="https://cms.okeanos.io/about/">&OkeanosSettings.learnMore;</a>
       </div>

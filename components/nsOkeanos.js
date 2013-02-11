@@ -15,10 +15,14 @@ Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource:///modules/gloda/log4moz.js");
 Cu.import("resource:///modules/cloudFileAccounts.js");
 
-var gPithosUrl = "https://pithos.okeanos.grnet.gr/v1/";
-var gPublicUrl = "https://pithos.okeanos.grnet.gr";
+var gPithosUrl = "";
+var gAstakosUrl = "";
 
 const kContainer = "ThunderBird FileLink/";
+const kPithosUrl = "https://pithos";
+const kPithosApi = "/v1/";
+const kAstakosUrl = "https://accounts";
+const kAstakosApi = "/im/authenticate";
 const kUpdate = "?update&format=json"
 
 
@@ -44,6 +48,7 @@ nsOkeanos.prototype = {
   _accountKey: false,
   _prefBranch: null,
   _userName: "",
+  _accountType: "",
   _loggedIn: false,
   _userInfo: false,
   _file : null,
@@ -74,8 +79,16 @@ nsOkeanos.prototype = {
     this._accountKey = aAccountKey;
     this._prefBranch = Services.prefs.getBranch(
             "mail.cloud_files.accounts." +  aAccountKey + ".");
-    this._userName = this._prefBranch.getCharPref("username");
-    this._loggedIn = this._cachedAuthToken != "";
+    this._accountType = this._prefBranch.getCharPref("accountType");
+    if (this._accountType == "official") {
+      gPithosUrl  = kPithosUrl  + ".okeanos.grnet.gr";
+      gAstakosUrl = kAstakosUrl + ".okeanos.grnet.gr";
+    } else {
+      gPithosUrl  = kPithosUrl  + ".okeanos.io";
+      gAstakosUrl = kAstakosUrl + ".okeanos.io";
+    }
+    this._userName = "";
+    this._loggedIn = this._userName != "" && this._cachedAuthToken != "";
   },
 
 
@@ -150,7 +163,7 @@ nsOkeanos.prototype = {
 
     if (!this._loggedIn) {
       let onLoginSuccess = function() {
-        this._getUserInfo(onGetUserInfoSuccess, onAuthFailure);
+        this._getUserInfo(finish, onAuthFailure);
       }.bind(this);
       return this.logon(onLoginSuccess, onAuthFailure, true);
     }
@@ -171,12 +184,13 @@ nsOkeanos.prototype = {
    *                  states of the upload procedure.
    */
   _finishUpload: function nsPihosPlus__finishUpload(aFile, aCallback) {
-    let cancel = Ci.nsIMsgCloudFileProvider.uploadCanceled;
+    let exceedsFileLimit = Ci.nsIMsgCloudFileProvider.uploadExceedsFileLimit;
+    let exceedsQuota = Ci.nsIMsgCloudFileProvider.uploadWouldExceedQuota;
 
     if (this._maxFileSize != -1 && aFile.fileSize > this._maxFileSize)
-      return aCallback.onStopRequest(null, null, cancel);
+      return aCallback.onStopRequest(null, null, exceedsFileLimit);
     if (aFile.fileSize > this._availableStorage)
-      return aCallback.onStopRequest(null, null, cancel);
+      return aCallback.onStopRequest(null, null, exceedsQuota);
 
     this._userInfo = false; // force us to update userInfo on every upload.
 
@@ -235,7 +249,7 @@ nsOkeanos.prototype = {
     this.log.info("getting user info");
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("HEAD", gPithosUrl + this._userName, true);
+    req.open("HEAD", gPithosUrl + kPithosApi + this._userName, true);
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     req.onload = function() {
@@ -327,7 +341,7 @@ nsOkeanos.prototype = {
    * there's a url we can load in a content tab that will allow the user
    * to create an account.
    */
-  get createNewAccountUrl() "https://okeanos.grnet.gr",
+  get createNewAccountUrl() "https://okeanos.io",
 
   get fileUploadSizeLimit() this._maxFileSize,
   get remainingFileSpace() this._availableStorage,
@@ -438,7 +452,8 @@ nsOkeanos.prototype = {
    * URL's that nsOkeanos connects to.
    */
   overrideUrls : function nsOkeanos_overrideUrls(aNumUrls, aUrls) {
-    gPithosUrl = aUrls[0];
+    gAstakosUrl = aUrls[0];
+    gPithosUrl  = aUrls[1];
   },
 
 
@@ -452,7 +467,7 @@ nsOkeanos.prototype = {
    *                  returns the empty string if no password exists.
    */
   getPassword: function nsOkeanos_getPassword(aUsername, aNoPrompt) {
-    this.log.info("Getting password for user: " + aUsername);
+    this.log.info("Getting token for user: " + aUsername);
 
     if (aNoPrompt)
       this.log.info("Suppressing password prompt");
@@ -472,7 +487,7 @@ nsOkeanos.prototype = {
     let messengerBundle = Services.strings.createBundle(
         "chrome://okeanos/locale/messenger.properties");
     let promptString = messengerBundle.formatStringFromName(
-        "ppTokenPrompt", [this._userName, this.displayName], 2);
+        "ppTokenPrompt", [this._accountType, this.displayName], 2);
 
     if (authPrompter.prompt(this.displayName, promptString, gPithosUrl,
                 authPrompter.SAVE_PASSWORD_NEVER, null, password))
@@ -506,7 +521,7 @@ nsOkeanos.prototype = {
 
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
-    req.open("GET", gPithosUrl + this._userName, true);
+    req.open("GET", gAstakosUrl + kAstakosApi, true);
     req.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
     req.onerror = function() {
@@ -517,8 +532,27 @@ nsOkeanos.prototype = {
 
     req.onload = function() {
       if(req.status == 200) {
-        this._loggedIn = true;
-        successCallback();
+        this.log.info("request status = " + req.status +
+                      " response = " + req.responseText);
+        let docResponse = JSON.parse(req.responseText);
+        this.log.info("login response parsed = " + docResponse);
+        // XXX: official right now has `uniq'. It should change soon.
+        if (this._accountType == "official") {
+          this._userName = docResponse.uniq;
+        } else {
+          this._userName = docResponse.uuid;
+        }
+        this.log.info("uniq username = " + this._userName);
+        if (this._userName) {
+          this._loggedIn = true;
+          successCallback();
+        } else {
+          this.clearPassword();
+          this._loggedIn = false;
+          this._lastErrorText = req.responseText;
+          this._lastErrorStatus = req.status;
+          failureCallback();
+        }
       } else {
         this.clearPassword();
         this._loggedIn = false;
@@ -602,7 +636,8 @@ nsOkeanosFileUploader.prototype = {
   _prepareToSend: function nsPFU__prepareToSend(successCallback,
                                                 failureCallback) {
     // First create the container
-    let container = gPithosUrl + this.okeanos._userName + "/" + kContainer;
+    let container = gPithosUrl + kPithosApi +
+      this.okeanos._userName + "/" + kContainer;
     let dateStr = this._formatDate();
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
@@ -789,7 +824,7 @@ nsOkeanosFileUploader.prototype = {
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
         this.okeanos._urlsForFiles[this.file.path] =
-          gPublicUrl + req.getResponseHeader("x-object-public");
+          gPithosUrl + req.getResponseHeader("x-object-public");
         succeed();
       } else {
         failed();
