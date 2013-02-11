@@ -17,15 +17,26 @@
   </head>
   <body id="provider-settings">
     <form id="provider-form" onsubmit="return false;">
-      <label for="username">&OkeanosSettings.username;
-        (<a href="https://accounts.okeanos.grnet.gr/im/profile">&OkeanosSettings.dashboard;</a>):
-      </label>
-      <input id="username" type="text" required="true"/>
+      <p style="margin: 0px; padding: 0px;">
+        <table style="width: 100%; height: 32px">
+          <tr>
+            <td width="35%">
+              <label for="accountType">&OkeanosSettings.accountType;</label>
+            </td>
+            <td width="65%">
+              <select style="width: 100%;">
+                <option value="official">&OkeanosSettings.official;</option>
+                <option value="trial">&OkeanosSettings.trial;</option>
+              </select>
+            </td>
+          </tr>
+        </table>
+      </p>
       <div id="learn-more" class="float-right">
-        <a href="https://okeanos.grnet.gr/services/pithos/">&OkeanosSettings.learnMore;</a>
+        <a href="https://cms.okeanos.io/about/">&OkeanosSettings.learnMore;</a>
       </div>
       <div>
-        <a href="https://accounts.okeanos.grnet.gr/im/signup">&OkeanosSettings.needAnAccount;</a>
+        <a href="http://www.okeanos.io/">&OkeanosSettings.needAnAccount;</a>
       </div>
     </form>
   </body>

@@ -3,8 +3,8 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 function extraArgs() {
-  var usernameValue = document.getElementById("username").value;
+  var accountType = document.getElementById("accountType").value;
   return {
-    "username": {type: "char", value: usernameValue},
+    "accountType": {type: "char", value: accountType},
   };
 }
