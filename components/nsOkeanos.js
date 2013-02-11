@@ -404,6 +404,17 @@ nsOkeanos.prototype = {
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
         this.log.info("Delete was successful!");
+        // Try to delete timestamp folder (just send the delete
+        // request and it will be deleted only if it's empty).
+        let dirPath = uploadPath.substring(0, uploadPath.lastIndexOf('/'));
+        let req2 = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
+                    .createInstance(Ci.nsIXMLHttpRequest);
+        req2.open("DELETE", dirPath, true);
+        req2.channel.loadFlags |=
+          Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+        req2.setRequestHeader("Content-type", "application/json");
+        req2.setRequestHeader("X-Auth-Token", this._cachedAuthToken);
+        req2.send();
         aCallback.onStopRequest(null, null, Cr.NS_OK);
       } else {
         this.log.error("Server has returned a failure on our delete request.");
