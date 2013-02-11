@@ -1,6 +1,6 @@
-# Pithos+ support for Thunderbird's Filelink feature
+# ~okeanos support for Thunderbird's Filelink feature
 
-This add-on adds support for Pithos+ accounts when using [Thunderbird's Filelink
+This add-on adds support for ~okeanos accounts when using [Thunderbird's Filelink
 feature.](https://support.mozillamessaging.com/kb/filelink-large-attachments)
 
 [Developer documentation for Filelink can be found

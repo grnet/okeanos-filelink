@@ -4,7 +4,7 @@
 
 /* This file implements the nsIMsgCloudFileProvider interface.
  *
- * This component handles the PithosPlus implementation of the
+ * This component handles the ~okeanos implementation of the
  * nsIMsgCloudFileProvider interface.
  */
 
@@ -22,24 +22,24 @@ const kContainer = "ThunderBird FileLink/";
 const kUpdate = "?update&format=json"
 
 
-function nsPithosPlus() {
-  this.log = Log4Moz.getConfiguredLogger("PithosPlus");
+function nsOkeanos() {
+  this.log = Log4Moz.getConfiguredLogger("Okeanos");
 }
 
-nsPithosPlus.prototype = {
+nsOkeanos.prototype = {
   /* nsISupports */
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIMsgCloudFileProvider]),
 
   classID: Components.ID("{026722d4-5e2b-11e2-ab23-b6f96188709b}"),
 
-  get type() "PithosPlus",
-  get displayName() "Pithos+",
+  get type() "Okeanos",
+  get displayName() "~okeanos",
   get serviceURL() "https://okeanos.grnet.gr/",
-  get iconClass() "chrome://pithosplus/content/pithosplus.png",
+  get iconClass() "chrome://okeanos/content/okeanos.png",
   get accountKey() this._accountKey,
   get lastError() this._lastErrorText,
-  get settingsURL() "chrome://pithosplus/content/settings.xhtml",
-  get managementURL() "chrome://pithosplus/content/management.xhtml",
+  get settingsURL() "chrome://okeanos/content/settings.xhtml",
+  get managementURL() "chrome://okeanos/content/management.xhtml",
 
   _accountKey: false,
   _prefBranch: null,
@@ -69,7 +69,7 @@ nsPithosPlus.prototype = {
    *
    * @param aAccountKey the account key to initialize with.
    */
-  init: function nsPithosPlus_init(aAccountKey) {
+  init: function nsOkeanos_init(aAccountKey) {
     this.log.info("in init");
     this._accountKey = aAccountKey;
     this._prefBranch = Services.prefs.getBranch(
@@ -81,13 +81,13 @@ nsPithosPlus.prototype = {
 
   /**
    * Private callback function passed to, and called from
-   * nsPithosPlusFileUploader.
+   * nsOkeanosFileUploader.
    *
    * @param aRequestObserver a request observer for monitoring the start and
    *                         stop states of a request.
    * @param aStatus the status of the request.
    */
-  _uploaderCallback: function nsPithosPlus__uploaderCallback(
+  _uploaderCallback: function nsOkeanos__uploaderCallback(
                          aRequestObserver, aStatus) {
     aRequestObserver.onStopRequest(null, null, aStatus);
 
@@ -112,13 +112,13 @@ nsPithosPlus.prototype = {
 
 
   /**
-   * Attempts to upload a file to PithosPlus servers.
+   * Attempts to upload a file to ~okeanos servers.
    *
    * @param aFile the nsILocalFile to be uploaded
    * @param aCallback an nsIRequestObserver for monitoring the start and
    *                  stop states of the upload procedure.
    */
-  uploadFile: function nsPithosPlus_uploadFile(aFile, aCallback) {
+  uploadFile: function nsOkeanos_uploadFile(aFile, aCallback) {
     this.log.info("in upload file");
     if (Services.io.offline)
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
@@ -128,7 +128,7 @@ nsPithosPlus.prototype = {
     // if we're uploading a file, queue this request.
     if (this._uploadingFile && this._uploadingFile != aFile) {
       this.log.info("Adding file to queue");
-      let uploader = new nsPithosPlusFileUploader(
+      let uploader = new nsOkeanosFileUploader(
           this, aFile, this._uploaderCallback.bind(this), aCallback);
       this._uploads.push(uploader);
       return;
@@ -181,7 +181,7 @@ nsPithosPlus.prototype = {
     this._userInfo = false; // force us to update userInfo on every upload.
 
     if (!this._uploader) {
-      this._uploader = new nsPithosPlusFileUploader(
+      this._uploader = new nsOkeanosFileUploader(
           this, aFile, this._uploaderCallback.bind(this), aCallback);
       this._uploads.unshift(this._uploader);
     }
@@ -195,7 +195,7 @@ nsPithosPlus.prototype = {
    *
    * @param aFile the nsILocalFile to cancel the upload for.
    */
-  cancelFileUpload: function nsPithosPlus_cancelFileUpload(aFile) {
+  cancelFileUpload: function nsOkeanos_cancelFileUpload(aFile) {
     this.log.info("in cancel upload");
     if (this._uploadingFile != null && this._uploader != null &&
         this._uploadingFile.equals(aFile)) {
@@ -218,7 +218,7 @@ nsPithosPlus.prototype = {
    *
    * @param aFile the nsILocalFile to get the URL for.
    */
-  urlForFile: function nsPithosPlus_urlForFile(aFile) {
+  urlForFile: function nsOkeanos_urlForFile(aFile) {
     return this._urlsForFiles[aFile.path];
   },
 
@@ -231,7 +231,7 @@ nsPithosPlus.prototype = {
    * @param failureCallback a callback fired if retrieving profile information
    *                        fails.
    */
-  _getUserInfo: function nsPithosPlus_userInfo(successCallback, failureCallback) {
+  _getUserInfo: function nsOkeanos_userInfo(successCallback, failureCallback) {
     this.log.info("getting user info");
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
@@ -281,7 +281,7 @@ nsPithosPlus.prototype = {
    * @param aListener an nsIRequestObserver for monitoring the start and stop
    *                  states of fetching profile information.
    */
-  refreshUserInfo: function nsPithosPlus_refreshUserInfo(aWithUI, aListener) {
+  refreshUserInfo: function nsOkeanos_refreshUserInfo(aWithUI, aListener) {
     if (Services.io.offline)
       throw Ci.nsIMsgCloudFileProvider.offlineErr;
 
@@ -312,12 +312,12 @@ nsPithosPlus.prototype = {
 
 
   /**
-   * For a particular error, return a URL if Pithos has a page for handling
+   * For a particular error, return a URL if ~okeanos has a page for handling
    * that particular error.
    *
    * @param aError an error to get the URL for.
    */
-  providerUrlForError: function nsPithosPlus_providerUrlForError(aError) {
+  providerUrlForError: function nsOkeanos_providerUrlForError(aError) {
     return "";
   },
 
@@ -335,10 +335,10 @@ nsPithosPlus.prototype = {
 
 
   /**
-   * Our PithosPlus implementation does not implement the
+   * Our ~okeanos implementation does not implement the
    * createNewAccount function defined in nsIMsgCloudFileProvider.idl.
    */
-  createNewAccount: function nsPithosPlus_createNewAccount(
+  createNewAccount: function nsOkeanos_createNewAccount(
           aEmailAddress, aPassword, aFirstName, aLastName) {
     return Cr.NS_ERROR_NOT_IMPLEMENTED;
   },
@@ -351,7 +351,7 @@ nsPithosPlus.prototype = {
    * @param aRequestObserver an nsIRequestObserver for monitoring the start and
    *                         stop states of the login procedure.
    */
-  createExistingAccount: function nsPithosPlus_createExistingAccount(
+  createExistingAccount: function nsOkeanos_createExistingAccount(
                              aRequestObserver) {
      // XXX: replace this with a better function
     let successCb = function(aResponseText, aRequest) {
@@ -374,7 +374,7 @@ nsPithosPlus.prototype = {
    * @param aCallback an nsIRequestObserver for monitoring the starting and
    *                  ending states of the deletion request.
    */
-  deleteFile: function nsPithosPlus_deleteFile(aFile, aCallback) {
+  deleteFile: function nsOkeanos_deleteFile(aFile, aCallback) {
     this.log.info("Deleting a file");
 
     if (Services.io.offline) {
@@ -424,9 +424,9 @@ nsPithosPlus.prototype = {
 
   /**
    * This function is used by our testing framework to override the default
-   * URL's that nsPithosPlus connects to.
+   * URL's that nsOkeanos connects to.
    */
-  overrideUrls : function nsPithosPlus_overrideUrls(aNumUrls, aUrls) {
+  overrideUrls : function nsOkeanos_overrideUrls(aNumUrls, aUrls) {
     gPithosUrl = aUrls[0];
   },
 
@@ -440,7 +440,7 @@ nsPithosPlus.prototype = {
    *                  the password prompt if no password exists.  If so,
    *                  returns the empty string if no password exists.
    */
-  getPassword: function nsPithosPlus_getPassword(aUsername, aNoPrompt) {
+  getPassword: function nsOkeanos_getPassword(aUsername, aNoPrompt) {
     this.log.info("Getting password for user: " + aUsername);
 
     if (aNoPrompt)
@@ -459,7 +459,7 @@ nsPithosPlus.prototype = {
     let password = { value: "" };
     // Prompt for a token
     let messengerBundle = Services.strings.createBundle(
-        "chrome://pithosplus/locale/messenger.properties");
+        "chrome://okeanos/locale/messenger.properties");
     let promptString = messengerBundle.formatStringFromName(
         "ppTokenPrompt", [this._userName, this.displayName], 2);
 
@@ -472,15 +472,15 @@ nsPithosPlus.prototype = {
 
 
   /**
-   * Clears any saved PithosPlus passwords for this instance's account.
+   * Clears any saved ~okeanos passwords for this instance's account.
    */
-  clearPassword: function nsPithosPlus_clearPassword() {
+  clearPassword: function nsOkeanos_clearPassword() {
     this._cachedAuthToken = "";
   },
 
 
   /**
-   * logon to the pithos account.
+   * logon to the ~okeanos account.
    *
    * @param successCallback - called if logon is successful
    * @param failureCallback - called back on error.
@@ -488,7 +488,7 @@ nsPithosPlus.prototype = {
    *                This is used for things like displaying account settings,
    *                where we don't want to pop up the oauth ui.
    */
-  logon: function nsPithosPlus_login(successCallback, failureCallback, aWithUI) {
+  logon: function nsOkeanos_login(successCallback, failureCallback, aWithUI) {
     this.log.info("Logging in, aWithUI = " + aWithUI);
     this._cachedAuthToken = this.getPassword(this._userName, !aWithUI);
     this.log.info("Sending login information...");
@@ -548,17 +548,17 @@ nsPithosPlus.prototype = {
 };
 
 
-function nsPithosPlusFileUploader(aPithosPlus, aFile, aCallback, aRequestObserver) {
-  this.pithosplus = aPithosPlus;
-  this.log = this.pithosplus.log;
-  this.log.info("new nsPithosPlusFileUploader file = " + aFile.leafName);
+function nsOkeanosFileUploader(aOkeanos, aFile, aCallback, aRequestObserver) {
+  this.okeanos = aOkeanos;
+  this.log = this.okeanos.log;
+  this.log.info("new nsOkeanosFileUploader file = " + aFile.leafName);
   this.file = aFile;
   this.callback = aCallback;
   this.requestObserver = aRequestObserver;
 }
 
-nsPithosPlusFileUploader.prototype = {
-  pithosplus : null,
+nsOkeanosFileUploader.prototype = {
+  okeanos : null,
   file : null,
   callback : null,
   _request : null,
@@ -591,7 +591,7 @@ nsPithosPlusFileUploader.prototype = {
   _prepareToSend: function nsPFU__prepareToSend(successCallback,
                                                 failureCallback) {
     // First create the container
-    let container = gPithosUrl + this.pithosplus._userName + "/" + kContainer;
+    let container = gPithosUrl + this.okeanos._userName + "/" + kContainer;
     let dateStr = this._formatDate();
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
                 .createInstance(Ci.nsIXMLHttpRequest);
@@ -604,13 +604,13 @@ nsPithosPlusFileUploader.prototype = {
           ? this.file.leafName
           : encodeURIComponent(this.file.leafName);
         this._urlFile = container + dateStr + "/" + fileName;
-        this.pithosplus._uploadInfo[this.file.path] = this._urlFile;
+        this.okeanos._uploadInfo[this.file.path] = this._urlFile;
         successCallback();
       } else {
         this.log.error("Preparing to send failed!");
         this.log.error("Response was: " + req.responseText);
-        this.pithosplus._lastErrorText = req.responseText;
-        this.pithosplus._lastErrorStatus = req.status;
+        this.okeanos._lastErrorText = req.responseText;
+        this.okeanos._lastErrorStatus = req.status;
         failureCallback();
       }
     }.bind(this);
@@ -619,7 +619,7 @@ nsPithosPlusFileUploader.prototype = {
         failureCallback();
     }.bind(this);
 
-    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
     req.setRequestHeader("Content-Type", "application/json");
     req.send();
   },
@@ -651,7 +651,7 @@ nsPithosPlusFileUploader.prototype = {
 
   /**
    * Once we've got the URL to upload the file to, this function actually
-   * does the upload of the file to Pithos+.
+   * does the upload of the file to ~okeanos.
    */
   _uploadFile: function nsPFU__uploadFile() {
     let req = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
@@ -685,7 +685,7 @@ nsPithosPlusFileUploader.prototype = {
     catch (ex) {
         contentType = "application/octet-stream";
     }
-    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
     req.setRequestHeader("Content-type", contentType);
     try {
       this._fstream = Cc["@mozilla.org/network/file-input-stream;1"]
@@ -749,7 +749,7 @@ nsPithosPlusFileUploader.prototype = {
       failed();
     }.bind(this);
 
-    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
     req.setRequestHeader("X-Object-Public", "True");
     req.setRequestHeader("Content-type", "application/json");
     req.send();
@@ -777,7 +777,7 @@ nsPithosPlusFileUploader.prototype = {
 
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
-        this.pithosplus._urlsForFiles[this.file.path] =
+        this.okeanos._urlsForFiles[this.file.path] =
           gPublicUrl + req.getResponseHeader("x-object-public");
         succeed();
       } else {
@@ -785,7 +785,7 @@ nsPithosPlusFileUploader.prototype = {
       }
     }.bind(this);
 
-    req.setRequestHeader("X-Auth-Token", this.pithosplus._cachedAuthToken);
+    req.setRequestHeader("X-Auth-Token", this.okeanos._cachedAuthToken);
     req.setRequestHeader("Content-type", "application/json");
     req.send();
   },
@@ -793,7 +793,7 @@ nsPithosPlusFileUploader.prototype = {
 
   /**
    * Cleans up any temporary files that this
-   * nsPithosPlusFileUploader may have created.
+   * nsOkeanosFileUploader may have created.
    */
   cleanupTempFile: function nsPFU_cleanupTempFile() {
     if (this._bufStream)
@@ -803,4 +803,4 @@ nsPithosPlusFileUploader.prototype = {
   },
 };
 
-const NSGetFactory = XPCOMUtils.generateNSGetFactory([nsPithosPlus]);
+const NSGetFactory = XPCOMUtils.generateNSGetFactory([nsOkeanos]);

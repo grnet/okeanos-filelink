@@ -2,7 +2,7 @@
 
 # Build config for the build script, build.sh. Look there for more info.
 
-APP_NAME=thunderbird-filelink-pithosplus
+APP_NAME=~okeanos-filelink
 CHROME_PROVIDERS="content locale"
 CLEAN_UP=1
 ROOT_FILES=
