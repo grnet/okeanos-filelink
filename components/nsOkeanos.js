@@ -34,7 +34,7 @@ nsOkeanos.prototype = {
   /* nsISupports */
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIMsgCloudFileProvider]),
 
-  classID: Components.ID("{026722d4-5e2b-11e2-ab23-b6f96188709b}"),
+  classID: Components.ID("{a73587f2-74f0-11e2-923f-d1186188709b}"),
 
   get type() "Okeanos",
   get displayName() "~okeanos",
