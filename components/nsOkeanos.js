@@ -43,7 +43,12 @@ nsOkeanos.prototype = {
   get accountKey() this._accountKey,
   get lastError() this._lastErrorText,
   get settingsURL() "chrome://okeanos/content/settings.xhtml",
-  get managementURL() "chrome://okeanos/content/management.xhtml",
+  get managementURL() {
+    if (this._accountType == "official")
+      return "chrome://okeanos/content/management_official.xhtml";
+    else
+      return "chrome://okeanos/content/management_trial.xhtml";
+  },
 
   _accountKey: false,
   _prefBranch: null,
