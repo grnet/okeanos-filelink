@@ -38,7 +38,7 @@ nsOkeanos.prototype = {
 
   get type() "Okeanos",
   get displayName() "~okeanos",
-  get serviceURL() "https://okeanos.grnet.gr/",
+  get serviceURL() "https://okeanos.io/",
   get iconClass() "chrome://okeanos/content/okeanos.png",
   get accountKey() this._accountKey,
   get lastError() this._lastErrorText,

@@ -7,4 +7,4 @@
 <!ENTITY OkeanosSettings.accountType "Account type:">
 <!ENTITY OkeanosSettings.official "Official service">
 <!ENTITY OkeanosSettings.trial "Free trial">
-<!ENTITY OkeanosSettings.dashboard "Get it from your Dashboard">
+<!ENTITY OkeanosSettings.dashboard "Get auth token from your Dashboard">

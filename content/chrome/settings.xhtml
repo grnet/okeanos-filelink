@@ -17,8 +17,9 @@
   </head>
   <body id="provider-settings">
     <form id="provider-form" onsubmit="return false;">
+      <a id="dashboard" href="https://accounts.okeanos.grnet.gr/im/profile" class="float-right">&OkeanosSettings.dashboard;</a>
       <label for="accountType">&OkeanosSettings.accountType;</label>
-      <select id="accountType">
+      <select id="accountType" onchange="toggleDashboard()">
         <option value="official">&OkeanosSettings.official;</option>
         <option value="trial">&OkeanosSettings.trial;</option>
       </select>

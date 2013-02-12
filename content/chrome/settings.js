@@ -8,3 +8,12 @@ function extraArgs() {
     "accountType": {type: "char", value: accountType},
   };
 }
+
+function toggleDashboard() {
+  var dashboard = document.getElementById("dashboard");
+  var accountType = document.getElementById("accountType").value;
+  if (accountType == "official")
+    dashboard.setAttribute("href", "https://accounts.okeanos.grnet.gr/im/profile");
+  else
+    dashboard.setAttribute("href", "https://accounts.okeanos.io/im/profile");
+}
