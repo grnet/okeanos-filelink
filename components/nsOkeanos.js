@@ -87,7 +87,6 @@ nsOkeanos.prototype = {
       gPithosUrl  = kPithosUrl  + ".okeanos.io";
       gAstakosUrl = kAstakosUrl + ".okeanos.io";
     }
-    this._userName = "";
     this._loggedIn = this._userName != "" && this._cachedAuthToken != "";
   },
 
@@ -536,11 +535,10 @@ nsOkeanos.prototype = {
                       " response = " + req.responseText);
         let docResponse = JSON.parse(req.responseText);
         this.log.info("login response parsed = " + docResponse);
-        // XXX: official right now has `uniq'. It should change soon.
-        if (this._accountType == "official") {
+        this._userName = docResponse.uuid;
+        if (!this._userName) {
+          // XXX: official right now has `uniq'. It should change soon.
           this._userName = docResponse.uniq;
-        } else {
-          this._userName = docResponse.uuid;
         }
         this.log.info("uniq username = " + this._userName);
         if (this._userName) {
