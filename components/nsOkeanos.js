@@ -676,13 +676,13 @@ nsOkeanosFileUploader.prototype = {
     let m_names = new Array("Jan", "Feb", "Mar", "Apr", "May",
         "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
     let date = new Date();
-    var curr_hour = date.getHours() + "";
+    let curr_hour = date.getHours() + "";
     if (curr_hour.length == 1)
       curr_hour = "0" + curr_hour;
-    var curr_min = date.getMinutes() + "";
+    let curr_min = date.getMinutes() + "";
     if (curr_min.length == 1)
       curr_min = "0" + curr_min;
-    var curr_sec = date.getSeconds() + "";
+    let curr_sec = date.getSeconds() + "";
     if (curr_sec.length == 1)
       curr_sec = "0" + curr_sec;
     let dateStr = date.getDate() + " " + m_names[date.getMonth()] +
