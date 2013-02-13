@@ -131,7 +131,7 @@ nsOkeanos.prototype = {
   /**
    * Attempts to upload a file to ~okeanos servers.
    *
-   * @param aFile the nsILocalFile to be uploaded
+   * @param aFile the nsIFile to be uploaded
    * @param aCallback an nsIRequestObserver for monitoring the start and
    *                  stop states of the upload procedure.
    */
@@ -183,7 +183,7 @@ nsOkeanos.prototype = {
    * for a file. First, ensures that the file size is not too large, and that
    * we won't exceed our storage quota, and then kicks off the upload.
    *
-   * @param aFile the nsILocalFile to upload
+   * @param aFile the nsIFile to upload
    * @param aCallback the nsIRequestObserver for monitoring the start and stop
    *                  states of the upload procedure.
    */
@@ -211,7 +211,7 @@ nsOkeanos.prototype = {
   /**
    * Attempts to cancel a file upload.
    *
-   * @param aFile the nsILocalFile to cancel the upload for.
+   * @param aFile the nsIFile to cancel the upload for.
    */
   cancelFileUpload: function nsOkeanos_cancelFileUpload(aFile) {
     this.log.info("in cancel upload");
@@ -234,7 +234,7 @@ nsOkeanos.prototype = {
   /**
    * Returns the sharing URL for some uploaded file.
    *
-   * @param aFile the nsILocalFile to get the URL for.
+   * @param aFile the nsIFile to get the URL for.
    */
   urlForFile: function nsOkeanos_urlForFile(aFile) {
     return this._urlsForFiles[aFile.path];
