@@ -12,8 +12,12 @@ function extraArgs() {
 function toggleDashboard() {
   var dashboard = document.getElementById("dashboard");
   var accountType = document.getElementById("accountType").value;
-  if (accountType == "official")
-    dashboard.setAttribute("href", "https://accounts.okeanos.grnet.gr/im/profile");
-  else
-    dashboard.setAttribute("href", "https://accounts.okeanos.io/im/profile");
+  var newaccount = document.getElementById("newaccount");
+  if (accountType == "official") {
+    dashboard.setAttribute("href", "https://accounts.okeanos.grnet.gr/ui/api_access");
+    newaccount.setAttribute("href", "https://accounts.okeanos.grnet.gr/ui/signup");
+  } else {
+    dashboard.setAttribute("href", "https://accounts.okeanos.io/ui/api_access");
+    newaccount.setAttribute("href", "https://accounts.okeanos.io/ui/signup");
+  }
 }

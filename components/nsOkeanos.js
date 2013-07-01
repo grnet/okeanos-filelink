@@ -20,9 +20,9 @@ var gAstakosUrl = "";
 
 const kContainer = "ThunderBird FileLink/";
 const kPithosUrl = "https://pithos";
-const kPithosApi = "/v1/";
+const kPithosApi = "/object-store/v1/";
 const kAstakosUrl = "https://accounts";
-const kAstakosApi = "/im/authenticate";
+const kAstakosApi = "/account/v1.0/authenticate";
 const kUpdate = "?update&format=json"
 
 
@@ -38,7 +38,7 @@ nsOkeanos.prototype = {
 
   get type() "Okeanos",
   get displayName() "~okeanos",
-  get serviceURL() "https://okeanos.io/",
+  get serviceURL() "https://okeanos.grnet.gr/",
   get iconClass() "chrome://okeanos/content/okeanos.png",
   get accountKey() this._accountKey,
   get lastError() this._lastErrorText,
@@ -345,7 +345,7 @@ nsOkeanos.prototype = {
    * there's a url we can load in a content tab that will allow the user
    * to create an account.
    */
-  get createNewAccountUrl() "https://okeanos.io",
+  get createNewAccountUrl() "https://accounts.okeanos.grnet.gr/ui/signup",
 
   get fileUploadSizeLimit() this._maxFileSize,
   get remainingFileSpace() this._availableStorage,
@@ -541,10 +541,6 @@ nsOkeanos.prototype = {
         let docResponse = JSON.parse(req.responseText);
         this.log.info("login response parsed = " + docResponse);
         this._userName = docResponse.uuid;
-        if (!this._userName) {
-          // XXX: official right now has `uniq'. It should change soon.
-          this._userName = docResponse.uniq;
-        }
         this.log.info("uniq username = " + this._userName);
         if (this._userName) {
           this._loggedIn = true;
@@ -827,7 +823,7 @@ nsOkeanosFileUploader.prototype = {
     req.onload = function() {
       if (req.status >= 200 && req.status < 400) {
         this.okeanos._urlsForFiles[this.file.path] =
-          gPithosUrl + req.getResponseHeader("x-object-public");
+          req.getResponseHeader("x-object-public");
         succeed();
       } else {
         failed();
